@@ -1,0 +1,28 @@
+{
+  "pass": true,
+  "parsed_json": {
+    "critical_issues": [
+      "No feature implementation was applied: all listed files are marked 'planned, not applied', so Gmail Trigger functionality does not exist.",
+      "No database migration was created/applied, leaving required config/state/dedup/dead-letter persistence absent.",
+      "No tests were added or executed; all required scenarios (OAuth lifecycle, dedup/checkpoint correctness, watch/poll behavior, retry/error handling) remain unverified.",
+      "Merge would create a false-positive delivery state for a high-risk trigger feature with at-least-once semantics and strict idempotency requirements."
+    ],
+    "improvements": [
+      "Re-run implementation in a writable environment and submit actual code diffs for migration, Gmail adapter, worker/orchestrator, webhook, validation, and payload normalization.",
+      "Add integration and fault-injection tests for watch + poll flows, invalid historyId recovery, duplicate/out-of-order notifications, and restart safety.",
+      "Implement and verify transactional ordering between event emission and checkpoint updates, plus unique dedup keys and TTL cleanup.",
+      "Expose operational visibility (health, lag, renewal status, retry counts, paused reason) and ensure API/UI schema validation matches the planned error contract."
+    ],
+    "security_findings": [
+      "Token and email-content handling safeguards are not enforceable yet because no code exists; risk remains for accidental logging of refresh tokens, bodies, or attachment bytes.",
+      "OAuth failure handling (revoked credentials, insufficient scope) is not implemented, so secure fail-closed pause/error behavior is missing.",
+      "No implemented limits/policies for attachment download/size/streaming, leaving potential data-exposure and resource-abuse paths unresolved."
+    ],
+    "performance_findings": [
+      "No polling cadence, backoff, or quota-aware request strategy is implemented; quota exhaustion and burst instability risks remain unmitigated.",
+      "No dedup/checkpoint implementation exists, so duplicate processing overhead and replay amplification remain unresolved.",
+      "No attachment streaming/size enforcement exists, so memory pressure risks under large MIME payloads are unaddressed."
+    ],
+    "merge_readiness": "Not ready"
+  }
+}

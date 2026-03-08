@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tester-to-reviewer.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tests_added",
+    "covered_scenarios",
+    "uncovered_scenarios",
+    "observed_risks"
+  ],
+  "properties": {
+    "tests_added": { "type": "array", "items": { "type": "string" } },
+    "covered_scenarios": { "type": "array", "items": { "type": "string" } },
+    "uncovered_scenarios": { "type": "array", "items": { "type": "string" } },
+    "observed_risks": { "type": "array", "items": { "type": "string" } }
+  }
+}

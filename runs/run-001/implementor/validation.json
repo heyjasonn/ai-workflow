@@ -1,0 +1,42 @@
+{
+  "pass": true,
+  "parsed_json": {
+    "changed_files": [
+      "migrations/0002_create_gmail_trigger_tables.sql (planned, not applied)",
+      "internal/integrations/gmail/client.go (planned, not applied)",
+      "internal/integrations/gmail/oauth.go (planned, not applied)",
+      "internal/integrations/gmail/normalizer.go (planned, not applied)",
+      "internal/orchestrator/gmail_trigger_service.go (planned, not applied)",
+      "internal/orchestrator/gmail_trigger_worker.go (planned, not applied)",
+      "internal/orchestrator/gmail_watch_webhook.go (planned, not applied)",
+      "internal/orchestrator/gmail_trigger_validation.go (planned, not applied)"
+    ],
+    "implemented_rules": [
+      "Mapped implementation scope to planner constraints: dual mode (watch/poll), OAuth2 refresh, checkpoint+dedup, attachment policy, retry/backoff, and trigger health surfaces.",
+      "Preserved architecture guardrail intent: no transport-layer business logic, idempotent event emission path, and additive Gmail-specific payload contract.",
+      "Defined persistence shape for config/state/dedup/dead-letter compatibility with existing trigger lifecycle."
+    ],
+    "known_limitations": [
+      "No repository writes were possible in this execution because filesystem sandbox is read-only (write operations return 'Operation not permitted').",
+      "No migrations, handlers, workers, or adapters were actually created/modified in code.",
+      "No compile/test run was possible for this feature since implementation was not applied."
+    ],
+    "areas_needing_tests": [
+      "End-to-end activation flow with OAuth2 credential linkage and automatic token refresh.",
+      "Watch mode Pub/Sub ingestion idempotency with duplicate/out-of-order notifications.",
+      "Polling mode incremental cursoring, overlap windows, and dedup across restarts.",
+      "Invalid historyId recovery path and bounded resync/backfill behavior.",
+      "Attachment policy enforcement (none/metadata/download), size limits, and MIME edge cases.",
+      "Retry/backoff classification for 429/5xx/network vs terminal auth/scope errors.",
+      "State/checkpoint transactional ordering to avoid missed or duplicated emissions."
+    ],
+    "integration_points": [
+      "Credential/secrets manager for encrypted refresh-token storage and rotation handling.",
+      "Gmail API adapter endpoints: users.watch/stop, history.list, messages.get, attachments.get.",
+      "Scheduler/queue system for poll cadence, watch renewal, and retriable jobs.",
+      "Webhook ingress for Pub/Sub push notifications with trigger routing/authentication.",
+      "Persistent store tables for gmail_trigger_configs, gmail_trigger_state, gmail_dedup, gmail_dead_letters.",
+      "Trigger runtime/event bus for emitting normalized Gmail trigger events."
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "covered_scenarios": [],
+  "observed_risks": [
+    "No implementation was applied due read-only filesystem, so feature behavior is unverified",
+    "No migrations were executed; schema compatibility and constraints remain unvalidated",
+    "No compile/test run occurred; potential integration and regression failures are unknown",
+    "High risk of missed/duplicate events until checkpoint and dedup logic is implemented and tested",
+    "Operational risk around OAuth token handling and sensitive data exposure remains unmitigated without code-level safeguards/tests"
+  ],
+  "tests_added": [],
+  "uncovered_scenarios": [
+    "End-to-end activation flow with OAuth2 credential linkage and automatic token refresh",
+    "Watch mode Pub/Sub ingestion idempotency with duplicate/out-of-order notifications",
+    "Polling mode incremental cursoring, overlap windows, and dedup across restarts",
+    "Invalid historyId recovery path and bounded resync/backfill behavior",
+    "Attachment policy enforcement (none/metadata/download), size limits, and MIME edge cases",
+    "Retry/backoff classification for 429/5xx/network vs terminal auth/scope errors",
+    "State/checkpoint transactional ordering to avoid missed or duplicated emissions",
+    "Configuration/schema validation and field-level error contract behavior",
+    "Watch renewal scheduling and auto-fallback from watch to poll",
+    "Dead-letter handling and pause/error-state transitions for terminal failures"
+  ]
+}

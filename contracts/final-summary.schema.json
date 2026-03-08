@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "final-summary.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "critical_issues",
+    "improvements",
+    "security_findings",
+    "performance_findings",
+    "merge_readiness"
+  ],
+  "properties": {
+    "critical_issues": { "type": "array", "items": { "type": "string" } },
+    "improvements": { "type": "array", "items": { "type": "string" } },
+    "security_findings": { "type": "array", "items": { "type": "string" } },
+    "performance_findings": { "type": "array", "items": { "type": "string" } },
+    "merge_readiness": {
+      "type": "string",
+      "enum": ["Not ready", "Ready with follow-ups", "Ready"]
+    }
+  }
+}

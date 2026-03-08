@@ -1,0 +1,98 @@
+{
+  "pass": true,
+  "parsed_json": {
+    "architecture_overview": "Add a Gmail Trigger subsystem with two ingestion paths (Gmail Watch via Pub/Sub push and polling fallback) behind one trigger runtime interface. A Gmail connector service handles OAuth2 token refresh, Gmail API calls (watch/history/messages/attachments), and normalization. Trigger state service persists checkpoint (historyId/cursor), dedup keys, health, and renewal metadata. A scheduler manages polling cadence and watch renewal. Event emission is idempotent and at-least-once, with dedup on messageId+historyId and replay-safe processing. Secrets remain in encrypted credential storage; observability exposes status, lag, renewal, retries, and quota errors.",
+    "request_flow": [
+      "User creates Gmail Trigger node config (mode, filters, attachment policy) and links OAuth2 credential.",
+      "Backend validates config, stores node config, stores encrypted refresh token reference, initializes checkpoint state.",
+      "If mode=watch: backend calls users.watch, stores watch expiration/historyId, and subscribes Pub/Sub push endpoint mapping to trigger instance.",
+      "Pub/Sub notification arrives with emailAddress/historyId; receiver authenticates source, enqueues trigger job.",
+      "Worker loads checkpoint, calls Gmail history.list from last historyId, fetches candidate message IDs, dedups, hydrates messages, applies filters/policies, emits workflow events, updates checkpoint.",
+      "If mode=poll: scheduler enqueues periodic job; worker queries messages.list using configured query/labels and time cursor, then same dedup/hydrate/emit/update path.",
+      "On retriable failures (429/5xx/network), worker retries with exponential backoff and jitter; on terminal auth/config errors, trigger is paused/error-state with actionable reason.",
+      "Watch renewal job runs before expiration; if renewal fails repeatedly, auto-fallback to polling (if enabled) or pause with status."
+    ],
+    "api_contract": {
+      "method": "POST",
+      "path": "/api/v1/triggers/gmail",
+      "request_fields": [
+        "name",
+        "credentialId",
+        "mode (watch|poll|auto)",
+        "pollIntervalSec",
+        "filters.labels[]",
+        "filters.query",
+        "filters.from",
+        "filters.to",
+        "filters.subject",
+        "filters.unreadOnly",
+        "filters.includeSpamTrash",
+        "mailboxScope (inbox|all)",
+        "attachments.policy (none|metadata|download)",
+        "attachments.maxSizeBytes",
+        "backfill.onEnable (none|sinceDuration)",
+        "backfill.sinceDuration",
+        "emit.bodyFormat (text|html|both)"
+      ],
+      "response_fields": [
+        "triggerId",
+        "status (active|paused|error|initializing)",
+        "effectiveMode (watch|poll)",
+        "checkpoint.historyId",
+        "checkpoint.cursorTs",
+        "watch.expirationTs",
+        "health.lastSuccessTs",
+        "health.lastErrorCode",
+        "createdAt",
+        "updatedAt"
+      ],
+      "error_contract": [
+        "400 VALIDATION_ERROR: invalid filter/query/limits with field-level details",
+        "401 CREDENTIAL_INVALID: missing/revoked OAuth grant",
+        "403 INSUFFICIENT_SCOPE: required Gmail scope not granted",
+        "409 CONFLICT: trigger already exists for same node+credential when uniqueness enforced",
+        "429 RATE_LIMITED: quota exceeded, includes retryAfter hint",
+        "502 PROVIDER_ERROR: Gmail/PubSub transient upstream failure",
+        "503 RETRY_SCHEDULED: temporary activation/dependency failure; activation pending"
+      ],
+      "backward_compatibility": "Introduce as new node type `gmailTrigger` without changing existing trigger contracts. Payload adds Gmail-specific object under stable top-level event envelope; unknown fields are additive only. Existing workflow engine semantics (at-least-once delivery, retry model) are preserved."
+    },
+    "db_changes": [
+      "Create `gmail_trigger_configs` (trigger_id FK, mode, filters JSONB, attachment_policy, poll_interval_sec, backfill_policy, include_spam_trash, mailbox_scope, enabled flags).",
+      "Create `gmail_trigger_state` (trigger_id PK, checkpoint_history_id, cursor_ts, last_processed_internal_date, watch_expiration_ts, renewal_attempts, last_success_ts, last_error_code, paused_reason).",
+      "Create `gmail_dedup` (trigger_id, dedup_key, first_seen_ts, ttl_ts) with unique index on (trigger_id, dedup_key).",
+      "Create `gmail_dead_letters` (id, trigger_id, source_message_id, error_type, error_payload, attempts, created_ts, last_attempt_ts, resolved_ts).",
+      "Add metrics rollup table or stream labels for trigger_id: processed_count, duplicate_count, retry_count, auth_fail_count, quota_fail_count, lag_ms."
+    ],
+    "implementation_steps": [
+      "Define node schema/UI/DSL for Gmail Trigger config with validation defaults and field-level errors.",
+      "Integrate Google OAuth2 credential flow for offline access and encrypted refresh token storage; implement refresh-token rotation handling.",
+      "Build Gmail API adapter methods: watch.start/stop, history.list pagination, messages.get (format full/metadata), attachments.get streaming.",
+      "Implement normalization mapper to stable event payload (ids, headers, snippet, body parts, labels, internalDate, attachments metadata/content by policy).",
+      "Implement state/checkpoint manager with atomic update and dedup insert semantics to ensure idempotent emission.",
+      "Implement watch ingestion endpoint and verification, queue handoff, duplicate/out-of-order notification handling.",
+      "Implement polling worker with query construction, windowing, incremental cursoring, and overlap-safe dedup.",
+      "Add retry/backoff policy and terminal error classification (auth revoked, invalid historyId, bad config).",
+      "Implement invalid historyId recovery path (controlled resync from bounded window or configured backfill policy).",
+      "Add scheduler jobs for polling cadence and watch renewal; support auto-fallback mode logic.",
+      "Instrument logs/metrics/status endpoints and expose trigger health/checkpoint/watch renewal state in UI/API.",
+      "Write docs and run integration tests covering OAuth lifecycle, filtering, duplicates, restart recovery, MIME/attachment edge cases, and fault injection."
+    ],
+    "constraints": [
+      "Must not log tokens, message bodies, or attachment bytes unless explicitly permitted by secure debug mode.",
+      "Use least-privilege Gmail scopes (prefer gmail.readonly) and avoid broader scopes in v1.",
+      "Event delivery target is at-least-once; dedup must provide effectively-once behavior for downstream workflows.",
+      "Watch mode requires external Pub/Sub + public push endpoint; polling must remain fully functional as fallback.",
+      "Attachment downloads must enforce max size and streaming limits to avoid memory spikes.",
+      "Checkpoint updates and emissions must be transactionally ordered to prevent missed/duplicate events on crash."
+    ],
+    "assumptions": [
+      "Workflow platform already supports generic trigger lifecycle (create/activate/pause/resume/delete) and job queue execution.",
+      "Encrypted credential store exists and can reference OAuth secrets by credentialId.",
+      "A persistent relational datastore with transactional guarantees is available.",
+      "System can expose/receive authenticated HTTP endpoints for Pub/Sub push callbacks.",
+      "v1 parity target is behavioral similarity to n8n, not byte-for-byte payload identity.",
+      "Default activation behavior is no historical backfill unless user opts in."
+    ]
+  }
+}

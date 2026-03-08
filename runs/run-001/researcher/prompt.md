@@ -1,0 +1,14 @@
+# Prompt Artifact
+
+- Step: `researcher`
+- Attempt: `1`
+
+## Prompt
+
+~~~text
+You are part of a multi-agent backend workflow. Return strict JSON only.
+Task category: new-feature
+Requirement: Implement Gmail Trigger Node like n8n
+Required output schema:
+{"problem_summary":"string","requirements":["string"],"impacted_components":["string"],"dependencies":["string"],"edge_cases":["string"],"risks":["string"],"open_questions":["string"],"test_scenarios":["string"]}
+~~~
